@@ -10,12 +10,14 @@ export class Game {
     public player2 : WebSocket;
     public board: Chess
     private startTime : Date;
+    private moveCount : number;
 
     constructor(player1: WebSocket, player2: WebSocket){
         this.player1 = player1; 
         this.player2 = player2;
         this.board = new Chess();
         this.startTime = new Date();
+        this.moveCount = 0;
         this.player1.send(JSON.stringify({
             type: INIT_GAME,
             payload:{
@@ -35,17 +37,24 @@ export class Game {
         to: string;
     }){
         //validation here 
+        if(socket !== this.player1 && this.moveCount % 2 === 0){
+            return;
+        }
+
+        if(socket !== this.player2 && this.moveCount % 2 === 1){
+            return ;
+        }
+
         // is Move Valid??
         
         try {
-            this.board.move(move)
-            
+            this.board.move(move);         
         } catch (error) {
             console.log(error);
             socket.send("Invalid Move");
             return;
         }
-
+        
         if(this.board.isGameOver()){
             this.player1.send(JSON.stringify({
                 type: GAME_OVER,
@@ -61,20 +70,21 @@ export class Game {
             }))
             return;
         }
-
-        if(this.board.moves.length % 2 === 0){
-            this.player1.emit(JSON.stringify({
+        
+        if(this.moveCount%2===0){
+            this.player2.send(JSON.stringify({
                 type: MOVE,
                 payload : move
             }))
         }
         else{
-            this.player2.emit(JSON.stringify({
+            this.player1.send(JSON.stringify({
                 type: MOVE,
                 payload: move
             }))
         }
         
-
+        this.moveCount++;
+        
     }
 }
